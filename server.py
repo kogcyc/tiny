@@ -3,10 +3,14 @@ import socketserver
 import os
 
 PORT = int(os.getenv("PORT", 8080))  # DigitalOcean sets this
-routes = {}  # Dictionary to store route functions
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get script directory
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")  # Path to "public" folder
 
-# Flask-like route decorator
+# Routing system (Flask-style)
+routes = {}
+
 def route(path):
+    """Decorator to register routes."""
     def decorator(func):
         routes[path] = func
         return func
@@ -14,28 +18,38 @@ def route(path):
 
 class SimpleHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        """Handle GET requests using a Flask-like routing system."""
-        handler = routes.get(self.path, self.not_found)  # Get the function or 404
-        self.send_response(200)
+        """Handle GET requests with dynamic wildcard routing."""
+
+        for pattern, handler in routes.items():
+            if pattern == self.path or (pattern.endswith("/*") and self.path.startswith(pattern[:-1])):
+                response, mimetype = handler(self.path)
+                self.send_response(200 if response else 404)
+                self.send_header("Content-type", mimetype)
+                self.end_headers()
+                self.wfile.write(response.encode() if response else b"<h1>404 Not Found</h1>")
+                return
+
+        # Default 404
+        self.send_response(404)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write(handler().encode())
+        self.wfile.write(b"<h1>404 Not Found</h1>")
 
-    def not_found(self):
-        return "<h1>404 Not Found</h1><p>The requested page does not exist.</p>"
+# Function to render any file in /public/
+def render_public(path):
+    """Serve files dynamically from the 'public' directory."""
+    filename = path[len("/public/"):]  # Extract filename
+    filepath = os.path.join(PUBLIC_DIR, filename)
 
-# Define routes using the @route decorator
-@route("/")
-def home():
-    return "<h1>Welcome to the Home Page!</h1>"
+    if os.path.exists(filepath) and filename.endswith(".html"):
+        with open(filepath, "r", encoding="utf-8") as f:
+            return f.read(), "text/html"
+    return None, "text/html"
 
-@route("/about")
-def about():
-    return "<h1>About</h1><p>This is a simple Python server with Flask-style routing.</p>"
-
-@route("/contact")
-def contact():
-    return "<h1>Contact</h1><p>Email: hello@example.com</p>"
+# Wildcard route to serve any HTML file inside /public/
+@route("/public/*")
+def serve_public(path):
+    return render_public(path)
 
 # Start the server
 with socketserver.TCPServer(("", PORT), SimpleHandler) as httpd:
