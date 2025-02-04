@@ -1,19 +1,16 @@
-import os
 import http.server
 import socketserver
+import os
 
-from http import HTTPStatus
+PORT = int(os.getenv("PORT", 8080))  # DigitalOcean App Platform will set PORT
 
-
-class Handler(http.server.SimpleHTTPRequestHandler):
+class SimpleHandler(http.server.SimpleHTTPRequestHandler):
     def do_GET(self):
-        self.send_response(HTTPStatus.OK)
+        self.send_response(200)
+        self.send_header("Content-type", "text/html")
         self.end_headers()
-        msg = 'Hello! you requested %s' % (self.path)
-        self.wfile.write(msg.encode())
+        self.wfile.write(b"<h1>Hello, from DigitalOcean!</h1>")
 
-
-port = int(os.getenv('PORT', 80))
-print('Listening on port %s' % (port))
-httpd = socketserver.TCPServer(('', port), Handler)
-httpd.serve_forever()
+with socketserver.TCPServer(("", PORT), SimpleHandler) as httpd:
+    print(f"Serving on port {PORT}")
+    httpd.serve_forever()
