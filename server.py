@@ -5,8 +5,7 @@ import markdown  # Converts Markdown to HTML
 
 PORT = int(os.getenv("PORT", 8080))  # DigitalOcean sets this
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get script directory
-PUBLIC_DIR = os.path.join(BASE_DIR, "public")  # Path to "public" folder
-MD_DIR = os.path.join(PUBLIC_DIR, "md")  # Path to "public/md" folder
+MD_DIR = os.path.join(BASE_DIR, "md")  # Path to the root "md" folder
 
 # Routing system (Flask-style)
 routes = {}
@@ -44,16 +43,16 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
 # Function to render any file in /public/
 def render_public(filename):
     """Serve files dynamically from the 'public' directory."""
-    filepath = os.path.join(PUBLIC_DIR, filename)
+    filepath = os.path.join(BASE_DIR, "public", filename)
 
     if os.path.exists(filepath) and filename.endswith(".html"):
         with open(filepath, "r", encoding="utf-8") as f:
             return f.read(), "text/html"
     return None, "text/html"
 
-# Function to render Markdown files from /public/md/
-def render_public_md(filename):
-    """Serve Markdown files as HTML from 'public/md' directory."""
+# Function to render Markdown files from /md/
+def render_md(filename):
+    """Serve Markdown files as HTML from 'md' directory."""
     filepath = os.path.join(MD_DIR, filename)
 
     if os.path.exists(filepath) and filename.endswith(".md"):
@@ -63,18 +62,11 @@ def render_public_md(filename):
             return f"<html><body>{html_content}</body></html>", "text/html"
     return None, "text/html"
 
-# Wildcard route to serve HTML files inside /public/
-@route("/public/*")
-def serve_public(path):
-    filename = path[len("/public/"):]  # Extract filename from URL
-    return render_public(filename)
-
-# Wildcard route to serve Markdown files inside /public/md/
-@route("/public/md/*")
-def serve_public_md(path):
-    filename = path[len("/public/md/"):]  # Extract filename from URL
-    print(f'[ {filename} ]')
-    return render_public_md(filename)
+# Wildcard route to serve Markdown files inside /md/
+@route("/md/*")
+def serve_md(path):
+    filename = path[len("/md/"):]  # Extract filename from URL
+    return render_md(filename)
 
 # Route for home page
 @route("/")
@@ -85,3 +77,4 @@ def serve_home(_):
 with socketserver.TCPServer(("", PORT), SimpleHandler) as httpd:
     print(f"Serving on port {PORT}")
     httpd.serve_forever()
+ls -l public/md/hello.md
