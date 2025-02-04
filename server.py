@@ -25,14 +25,19 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
                 self.send_response(200 if response else 404)
                 self.send_header("Content-type", mimetype)
                 self.end_headers()
-                self.wfile.write(response.encode() if response else b"<h1>404 Not Found</h1>")
+                self.wfile.write(response.encode() if response else self.render_404().encode())
                 return
 
-        # Default 404
+        # Default 404 if no route matches
         self.send_response(404)
         self.send_header("Content-type", "text/html")
         self.end_headers()
-        self.wfile.write(b"<h1>404 Not Found</h1>")
+        self.wfile.write(self.render_404().encode())
+
+    def render_404(self):
+        """Render custom 404 page from /public/404.html."""
+        content, _ = render_public("404.html")
+        return content if content else "<h1>404 Not Found</h1><p>Page not found.</p>"
 
 # Function to render any file in /public/
 def render_public(filename):
