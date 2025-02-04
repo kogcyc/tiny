@@ -3,4 +3,6 @@
 - one
 - two
 
-    var this = 'that';
+~~~javascript
+var this = 'that';
+~~~
