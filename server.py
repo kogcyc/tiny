@@ -73,6 +73,7 @@ def serve_public(path):
 @route("/public/md/*")
 def serve_public_md(path):
     filename = path[len("/public/md/"):]  # Extract filename from URL
+    print(f'[ {filename} ]')
     return render_public_md(filename)
 
 # Route for home page
