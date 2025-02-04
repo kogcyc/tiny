@@ -1,11 +1,10 @@
 import http.server
 import socketserver
 import os
-import markdown  # Converts Markdown to HTML
 
 PORT = int(os.getenv("PORT", 8080))  # DigitalOcean sets this
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get script directory
-MD_DIR = os.path.join(BASE_DIR, "md")  # Path to the root "md" folder
+PUBLIC_DIR = os.path.join(BASE_DIR, "public")  # Path to "public" folder
 
 # Routing system (Flask-style)
 routes = {}
@@ -22,7 +21,7 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
         """Handle GET requests with dynamic wildcard routing."""
         for pattern, handler in routes.items():
             if pattern == self.path or (pattern.endswith("/*") and self.path.startswith(pattern[:-1])):
-                response, mimetype = handler(self.path)
+                response, mimetype = handler(self.path)MD_
                 self.send_response(200 if response else 404)
                 self.send_header("Content-type", mimetype)
                 self.end_headers()
@@ -43,30 +42,18 @@ class SimpleHandler(http.server.SimpleHTTPRequestHandler):
 # Function to render any file in /public/
 def render_public(filename):
     """Serve files dynamically from the 'public' directory."""
-    filepath = os.path.join(BASE_DIR, "public", filename)
+    filepath = os.path.join(PUBLIC_DIR, filename)
 
     if os.path.exists(filepath) and filename.endswith(".html"):
         with open(filepath, "r", encoding="utf-8") as f:
             return f.read(), "text/html"
     return None, "text/html"
 
-# Function to render Markdown files from /md/
-def render_md(filename):
-    """Serve Markdown files as HTML from 'md' directory."""
-    filepath = os.path.join(MD_DIR, filename)
-
-    if os.path.exists(filepath) and filename.endswith(".md"):
-        with open(filepath, "r", encoding="utf-8") as f:
-            md_content = f.read()
-            html_content = markdown.markdown(md_content)  # Convert MD to HTML
-            return f"<html><body>{html_content}</body></html>", "text/html"
-    return None, "text/html"
-
-# Wildcard route to serve Markdown files inside /md/
-@route("/md/*")
-def serve_md(path):
-    filename = path[len("/md/"):]  # Extract filename from URL
-    return render_md(filename)
+# Wildcard route to serve any HTML file inside /public/
+@route("/public/*")
+def serve_public(path):
+    filename = path[len("/public/"):]  # Extract filename from URL
+    return render_public(filename)
 
 # Route for home page
 @route("/")
@@ -77,4 +64,3 @@ def serve_home(_):
 with socketserver.TCPServer(("", PORT), SimpleHandler) as httpd:
     print(f"Serving on port {PORT}")
     httpd.serve_forever()
-ls -l public/md/hello.md
