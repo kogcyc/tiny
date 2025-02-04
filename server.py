@@ -1,7 +1,10 @@
+
 import http.server
 import socketserver
 import os
-import markdown  # Converts Markdown to HTML
+import markdown
+import json
+import re
 
 PORT = int(os.getenv("PORT", 8080))  # DigitalOcean sets this
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # Get script directory
@@ -47,14 +50,35 @@ def render_public(path):
             with open(filepath, "r", encoding="utf-8") as f:
                 return f.read(), "text/html"
 
-        # If it's a Markdown file, convert it to HTML
+        # If it's a Markdown file, process it
         elif filename.endswith(".md"):
-            with open(filepath, "r", encoding="utf-8") as f:
-                md_content = f.read()
-                html_content = markdown.markdown(md_content)  # Convert MD to HTML
-                return f"<html><body>{html_content}</body></html>", "text/html"
+            return render_markdown_with_json(filepath)
 
     return None, "text/html"  # Return 404 if the file is not found
+
+def render_markdown_with_json(filepath):
+    """Reads a Markdown file, extracts JSON metadata, and replaces placeholders before rendering to HTML."""
+    with open(filepath, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Extract JSON metadata (assumes JSON is enclosed in triple backticks)
+    match = re.match(r"```json\n(.*?)\n```", content, re.DOTALL)
+    metadata = {}
+
+    if match:
+        try:
+            metadata = json.loads(match.group(1))  # Convert JSON string to dictionary
+            content = content.replace(match.group(0), "").strip()  # Remove JSON block from Markdown
+        except json.JSONDecodeError:
+            pass  # If JSON is invalid, ignore it
+
+    # Replace placeholders in Markdown content with values from metadata
+    for key, value in metadata.items():
+        content = content.replace(f"{{{key}}}", value)
+
+    # Convert Markdown to HTML
+    html_content = markdown.markdown(content)
+    return f"<html><body>{html_content}</body></html>", "text/html"
 
 # Wildcard route to serve any HTML or Markdown file inside /public/
 @route("/public/*")
