@@ -50,7 +50,12 @@ def render_template(filename):
         with open(filepath, "r", encoding="utf-8") as f:
             return f.read(), "text/html"
     return "<h1>404 Not Found</h1>", "text/html"
-
+    
+# route to index.tml
+@route("/")
+def something(_):
+    return render_template("index.html")
+    
 # Example route explicitly rendering a file
 @route("/public/something.html")
 def something(_):
